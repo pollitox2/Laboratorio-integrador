@@ -1,11 +1,19 @@
-# Dockerfile HEREDADO del servicio orders (lo dejó el equipo anterior).
-# Hoy NO funciona. Diagnostica el error, corrígelo y luego déjalo listo para producción.
-FROM node:20-alpne
-
+FROM node:20-alpine AS builder
 WORKDIR /app
+
 COPY package*.json ./
 RUN npm ci --omit=dev
-COPY . .
+
+FROM node:20-alpine
+WORKDIR /app
+
+COPY --from=builder --chown=node:node /app/node_modules ./node_modules
+COPY --chown=node:node . .
+
+USER node
+
+HEALTHCHECK --interval=15s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget --spider http://localhost:3000/healthz || exit 1
 
 EXPOSE 3000
 CMD ["node", "server.js"]
