@@ -12,8 +12,8 @@ COPY --chown=node:node . .
 
 USER node
 
-HEALTHCHECK --interval=15s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --spider http://localhost:3000/healthz || exit 1
+HEALTHCHECK --interval=15s --timeout=3s --start-period=10s --retries=3 \
+  CMD wget -qO /dev/null http://127.0.0.1:3000/healthz || exit 1
 
 EXPOSE 3000
 CMD ["node", "server.js"]
