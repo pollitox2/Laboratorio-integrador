@@ -1,23 +1,19 @@
 version: '3.8'
 
-# Definicion de redes, aislamos frontend de db
 networks:
   frontend_net:
   backend_net:
 
-# Volumenes, persistencia para la base de datos
 volumes:
   db_data:
 
 services:
-  # Base de datos, postgres
   db:
     image: postgres:15-alpine
     env_file:
       - .env
     volumes:
       - db_data:/var/lib/postgresql/data
-      # init.sql solo lectura 
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
       - backend_net
@@ -27,7 +23,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # Cache, Redis
   cache:
     image: redis:7-alpine
     networks:
@@ -38,7 +33,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # Servicio Catalog
   catalog:
     build: ./catalog
     env_file:
@@ -50,7 +44,6 @@ services:
       db:
         condition: service_healthy
 
-  # Servicio Orders
   orders:
     build: ./orders
     env_file:
@@ -64,7 +57,6 @@ services:
       cache:
         condition: service_healthy
 
-  # Servicio Worker
   worker:
     build: ./worker
     env_file:
@@ -77,7 +69,6 @@ services:
       cache:
         condition: service_healthy
 
-  # Servicio Frontend
   frontend:
     build: ./frontend
     ports:
