@@ -1,34 +1,91 @@
-# Operación Despliegue — docker-compose.yml (ESQUELETO)
-#
-# Completa lo que falta (ver la guía del laboratorio, Fase 2).
-# Los nombres de servicio NO se pueden cambiar: frontend, catalog, orders, worker, db, cache.
-# Este archivo ya trae lo mínimo para que el stack exista; todavía NO es un despliegue correcto.
+version: '3.8'
+
+# Definicion de redes, aislamos frontend de db
+networks:
+  frontend_net:
+  backend_net:
+
+# Volumenes, persistencia para la base de datos
+volumes:
+  db_data:
 
 services:
-  frontend:
-    build: ./frontend
-    # TODO: publicar en el host el puerto ${FRONTEND_PORT} (definido en .env)
-    #       hacia el puerto interno en que escucha tu contenedor.
-
-  catalog:
-    build: ./catalog
-    env_file: .env
-
-  orders:
-    build: ./orders
-    env_file: .env
-
-  worker:
-    build: ./worker
-    env_file: .env
-
+  # Base de datos, postgres
   db:
-    image: postgres:16-alpine
-    env_file: .env
-    # TODO: ¿dónde viven los datos? ¿cómo se carga ./db/init.sql? ¿cómo sabe Docker que la base está lista?
+    image: postgres:15-alpine
+    env_file:
+      - .env
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      # init.sql solo lectura 
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - backend_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  # Cache, Redis
   cache:
     image: redis:7-alpine
-    # TODO: ¿cómo sabe Docker que Redis está listo?
+    networks:
+      - backend_net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-# TODO: decide cómo se conectan los servicios entre sí y quién puede hablar con quién.
+  # Servicio Catalog
+  catalog:
+    build: ./catalog
+    env_file:
+      - .env
+    networks:
+      - frontend_net
+      - backend_net
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Servicio Orders
+  orders:
+    build: ./orders
+    env_file:
+      - .env
+    networks:
+      - frontend_net
+      - backend_net
+    depends_on:
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_healthy
+
+  # Servicio Worker
+  worker:
+    build: ./worker
+    env_file:
+      - .env
+    networks:
+      - backend_net
+    depends_on:
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_healthy
+
+  # Servicio Frontend
+  frontend:
+    build: ./frontend
+    ports:
+      - "${FRONTEND_PORT}:8080"
+    networks:
+      - frontend_net
+    depends_on:
+      catalog:
+        condition: service_healthy
+      orders:
+        condition: service_healthy
