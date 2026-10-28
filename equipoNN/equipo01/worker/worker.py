@@ -16,6 +16,7 @@ import redis
 
 HEARTBEAT = pathlib.Path(os.environ.get("HEARTBEAT_FILE", "/tmp/healthy"))
 
+
 def log(msg: str) -> None:
     print(msg, flush=True)
 
