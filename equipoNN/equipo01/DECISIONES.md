@@ -26,14 +26,15 @@ El segundo problema que tuvimos fue la falla del verificador al evaluar depends_
 
 | Incidente | Qué pasó | Qué cambiaron | Cuánto demoraron |
 |-----------|----------|---------------|------------------|
-| 1 | | | |
-| 2 | | | |
-| 3 | | | |
+| 1 | El script verificador arrojó "AVISO codigo_de_app_modificado" en varios archivos, fallando la prueba por modificación de código original.| Por error, hubo un cambio en una identación adicional en los archivos, por lo que solo se tuvó que copiar y pegar los archivos originales para evitar que el script siguiera marcando que hubo un cambio en el archivo.| 25 minutos|
+| 2 | Docker Compose V2 arrojaba un WARN por usar el atributo obsoleto version: '3.8'. La advertencia que estaba en la consola,  corrompía la lectura JSON del script verificador.| Se eliminó por completo la línea version: '3.8' del archivo docker-compose.yml para entregar una salida limpia al script.| 15 minutos|
+| 3 | Pérdida de 1 punto en prueba "Caché de capas" durante la primera ejecución de verify.py.| No fue un fallo del código, sino de ejecución. Ya que, estábamos corriendo el script con el flag explícito --no-cache-check. Volvimos a correr el script limpio.| 5 minutos|
 
 ## Uso de IA
 
-_(Declaren si usaron un asistente de IA, para qué tareas, y qué parte de lo que les sugirió tuvieron que corregir o descartar.)_
+_Utilizamos Gemini como apoyo para entender el flujo y la arquitectura del proyecto. Específicamente, la IA nos ayudó a analizar qué hacía el código de la aplicación, revisar qué contenía cada archivo para identificar las configuraciones que faltaban, y nos ayudó para agregar algunas cosas mínimas necesarias en los Dockerfiles y organización del Docker-Compose._
 
 ## Qué haríamos distinto con más tiempo
 
-_(Dos o tres puntos.)_
+_1.Lo primero sería automatizar las pruebas, ya que implementaríamos un pipeline básico para que el script verify.py se ejecute automáticamente en cada Pull Request, lo que nos habría ahorrado las pérdidas de puntos por formato en el docker-compose.
+2.Lo segundo sería optimizar de mejor manera las imágenes, investigando cómo reducir aún más el peso final de los contenedores utilizando técnicas de limpieza de caché de paquetes en las capas de los multi-stage builds._
