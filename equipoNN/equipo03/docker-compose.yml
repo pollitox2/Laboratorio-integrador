@@ -53,7 +53,6 @@ services:
       cache:
         condition: service_healthy
         restart: true
-  
 
   orders:
     build: ./orders
@@ -87,6 +86,8 @@ services:
   frontend:
     build: ./frontend
     restart: always
+    env_file:
+      - .env
     ports:
       - "${FRONTEND_PORT}:8080"
     networks:
@@ -98,3 +99,20 @@ services:
       orders:
         condition: service_healthy
         restart: true
+
+  watchdog:
+    image: docker:27-cli
+    restart: always
+    network_mode: none
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command:
+      - sh
+      - -c
+      - |
+        while true; do
+          for c in $$(docker ps -aq --filter label=com.docker.compose.service=cache --filter status=exited); do
+            docker start $$c
+          done
+          sleep 2
+        done
