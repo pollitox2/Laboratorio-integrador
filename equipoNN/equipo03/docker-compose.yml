@@ -4,10 +4,12 @@ networks:
 
 volumes:
   db_data:
+  cache_data:
 
 services:
   db:
     image: postgres:15-alpine
+    restart: always
     env_file:
       - .env
     volumes:
@@ -23,16 +25,21 @@ services:
 
   cache:
     image: redis:7-alpine
+    restart: always
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - cache_data:/data
     networks:
       - backend_net
     healthcheck:
       test: [ "CMD", "redis-cli", "ping" ]
-      interval: 10s
-      timeout: 5s
+      interval: 5s
+      timeout: 3s
       retries: 5
 
   catalog:
     build: ./catalog
+    restart: always
     env_file:
       - .env
     environment:
@@ -45,9 +52,12 @@ services:
         condition: service_healthy
       cache:
         condition: service_healthy
+        restart: true
+  
 
   orders:
     build: ./orders
+    restart: always
     env_file:
       - .env
     networks:
@@ -58,9 +68,11 @@ services:
         condition: service_healthy
       cache:
         condition: service_healthy
+        restart: true
 
   worker:
     build: ./worker
+    restart: always
     env_file:
       - .env
     networks:
@@ -70,9 +82,11 @@ services:
         condition: service_healthy
       cache:
         condition: service_healthy
+        restart: true
 
   frontend:
     build: ./frontend
+    restart: always
     ports:
       - "${FRONTEND_PORT}:8080"
     networks:
@@ -80,5 +94,7 @@ services:
     depends_on:
       catalog:
         condition: service_healthy
+        restart: true
       orders:
         condition: service_healthy
+        restart: true
